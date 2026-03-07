@@ -2,15 +2,12 @@
 
 import logging
 import json
-import os
 import re
 from typing import Optional, Dict, Any, List
 from fastapi import HTTPException, status
-import httpx
-from dotenv import load_dotenv
+from app.utils.bedrock_client import bedrock_text_completion
 from app.utils.pdf_service import convert_markdown_to_pdf
 
-load_dotenv()
 logger = logging.getLogger(__name__)
 
 
@@ -213,10 +210,10 @@ async def generate_insurer_justification_document(
     bill_details: List[Dict[str, Any]],
     reports: List[Dict[str, Any]],
     doctor_notes: str,
-    model: str = "anthropic/claude-3.5-sonnet",
+    model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0",
 ) -> Optional[str]:
     """
-    Generate an insurer justification document using a separate LLM.
+    Generate an insurer justification document using AWS Bedrock.
     
     Args:
         patient_name: Patient's name
@@ -230,30 +227,13 @@ async def generate_insurer_justification_document(
         bill_details: List of bill details
         reports: List of report details
         doctor_notes: Doctor's notes
-        model: LLM model to use (default: claude-3.5-sonnet for better reasoning)
+        model: Bedrock model ID (default: Claude 3.5 Sonnet)
     
     Returns:
         str: Cloudinary URL of the generated PDF, or None if generation fails
     """
     try:
         logger.info(f"Generating insurer justification document for patient: {patient_name}")
-        
-        # Get API key from environment
-        api_key = os.getenv("OPEN_ROUTER_API_KEY")
-        if not api_key:
-            load_dotenv(override=True)
-            api_key = os.getenv("OPEN_ROUTER_API_KEY")
-        
-        if not api_key:
-            logger.error("OPEN_ROUTER_API_KEY environment variable is not set")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="OPEN_ROUTER_API_KEY environment variable is not set. Please check your .env file."
-            )
-        
-        api_key = api_key.strip()
-        
-        # Generate prompt
         prompt = get_justification_document_prompt(
             patient_name=patient_name,
             medical_condition=medical_condition,
@@ -267,72 +247,17 @@ async def generate_insurer_justification_document(
             reports=reports,
             doctor_notes=doctor_notes,
         )
-        
-        # Prepare request payload
-        payload = {
-            "model": model,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": "You are a medical documentation specialist who creates clear, comprehensive justification documents for insurance claims. Your documents help reduce claim denials by providing detailed medical necessity explanations."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            "temperature": 0.3,  # Lower temperature for more consistent, factual output
-        }
-        
-        # Prepare headers
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "HTTP-Referer": os.getenv("SITE_URL", "https://medicare-app.com"),
-            "X-Title": os.getenv("SITE_NAME", "MediCare Justification Document Generator"),
-            "Content-Type": "application/json"
-        }
-        
-        logger.info(f"Using OpenRouter API with model: {model}")
-        logger.info("Sending request to generate justification document")
-        
-        # Make async HTTP request to OpenRouter
-        try:
-            async with httpx.AsyncClient(timeout=180.0) as client:  # Longer timeout for complex documents
-                response = await client.post(
-                    url="https://openrouter.ai/api/v1/chat/completions",
-                    headers=headers,
-                    json=payload
-                )
-                response.raise_for_status()
-                response_data = response.json()
-        except httpx.HTTPStatusError as e:
-            error_detail = "Unknown error"
-            try:
-                error_data = e.response.json()
-                error_detail = error_data.get("error", {}).get("message", str(e))
-            except:
-                error_detail = str(e)
-            logger.error(f"OpenRouter API HTTP error: {error_detail}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"OpenRouter API error: {error_detail}"
-            )
-        except httpx.HTTPError as e:
-            logger.error(f"OpenRouter API HTTP error: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to connect to OpenRouter API: {str(e)}"
-            )
-        
-        # Extract response text
-        try:
-            response_text = response_data["choices"][0]["message"]["content"].strip()
-        except (KeyError, IndexError) as e:
-            logger.error(f"Invalid response format from OpenRouter: {response_data}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Invalid response format from OpenRouter API"
-            )
+        system_prompt = (
+            "You are a medical documentation specialist who creates clear, comprehensive "
+            "justification documents for insurance claims. Your documents help reduce claim "
+            "denials by providing detailed medical necessity explanations."
+        )
+        response_text = await bedrock_text_completion(
+            system_prompt=system_prompt,
+            user_content=prompt,
+            model_id=model,
+            temperature=0.3,
+        )
         
         logger.info(f"LLM response received: {len(response_text)} characters")
         logger.debug(f"Response preview: {response_text[:200]}...")

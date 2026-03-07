@@ -304,102 +304,24 @@ async def convert_markdown_to_pdf(markdown_content: str, patient_name: str, fold
     try:
         import cloudinary.uploader
         import markdown
-        from xhtml2pdf import pisa
-        
+        from fpdf import FPDF
+
         # Step 1: Convert markdown to HTML
         logger.info(f"Step 1: Converting markdown to HTML for {folder_suffix}...")
         html_content = markdown.markdown(
             markdown_content,
             extensions=['extra', 'nl2br', 'sane_lists']
         )
-        
-        # Wrap HTML content with proper structure and styling for PDF
-        html_document = f"""<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        @page {{
-            size: A4;
-            margin: 2cm;
-        }}
-        body {{
-            font-family: Arial, Helvetica, sans-serif;
-            font-size: 11pt;
-            line-height: 1.6;
-            color: #000;
-            margin: 0;
-            padding: 0;
-        }}
-        h1 {{
-            font-size: 24pt;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-top: 20pt;
-            margin-bottom: 15pt;
-            border-bottom: 2pt solid #3498db;
-            padding-bottom: 10pt;
-        }}
-        h2 {{
-            font-size: 18pt;
-            font-weight: bold;
-            color: #34495e;
-            margin-top: 18pt;
-            margin-bottom: 12pt;
-        }}
-        h3 {{
-            font-size: 14pt;
-            font-weight: bold;
-            color: #34495e;
-            margin-top: 15pt;
-            margin-bottom: 10pt;
-        }}
-        p {{
-            margin-bottom: 10pt;
-            text-align: justify;
-        }}
-        ul, ol {{
-            margin-bottom: 10pt;
-            padding-left: 20pt;
-        }}
-        li {{
-            margin-bottom: 5pt;
-        }}
-        strong {{
-            font-weight: bold;
-            color: #2c3e50;
-        }}
-        em {{
-            font-style: italic;
-        }}
-        hr {{
-            border: none;
-            border-top: 1pt solid #ddd;
-            margin: 15pt 0;
-        }}
-    </style>
-</head>
-<body>
-    {html_content}
-</body>
-</html>"""
-        
-        # Step 2: Convert HTML to PDF bytes using xhtml2pdf
+
+        # Step 2: Convert HTML to PDF using fpdf2 (pure Python, no cffi)
         logger.info(f"Step 2: Converting HTML to PDF for {folder_suffix}...")
         pdf_buffer = io.BytesIO()
-        pisa_status = pisa.CreatePDF(
-            src=html_document,
-            dest=pdf_buffer,
-            encoding='utf-8'
-        )
-        
-        if pisa_status.err:
-            logger.error(f"Error creating PDF: {pisa_status.err}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to create PDF from HTML: {pisa_status.err}"
-            )
-        
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.set_font("Helvetica", size=11)
+        pdf.write_html(html_content)
+        pdf.output(pdf_buffer)
         pdf_bytes = pdf_buffer.getvalue()
         pdf_buffer.close()
         logger.info(f"PDF generated: {len(pdf_bytes)} bytes")
@@ -431,7 +353,7 @@ async def convert_markdown_to_pdf(markdown_content: str, patient_name: str, fold
         return pdf_url
         
     except ImportError as e:
-        missing_lib = "markdown" if "markdown" in str(e) else "xhtml2pdf"
+        missing_lib = "markdown" if "markdown" in str(e) else "fpdf2"
         logger.error(f"{missing_lib} is not installed. Please install it: pip install {missing_lib}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

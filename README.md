@@ -56,7 +56,7 @@ A production-ready FastAPI template for building AI agent applications with Lang
 
 ### Prerequisites
 
-- Python 3.13+
+- Python **3.12 or 3.13** (required). Python 3.14 is not yet supported on Windows (many packages lack pre-built wheels and would require Visual C++ Build Tools.)
 - PostgreSQL ([see Database setup](#database-setup))
 - Docker and Docker Compose (optional)
 

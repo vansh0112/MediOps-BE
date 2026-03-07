@@ -2,15 +2,11 @@
 
 import logging
 import json
-import os
-import base64
 from typing import Optional, List, Dict, Any
 from fastapi import HTTPException, status
-import httpx
-from dotenv import load_dotenv
+from app.utils.bedrock_client import bedrock_vision_completion
 from app.schemas.reports import ReportParsed, Biomarker
 
-load_dotenv()
 logger = logging.getLogger(__name__)
 
 
@@ -69,111 +65,23 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure:
 Do not include any explanations, markdown formatting, or additional text. Return ONLY the JSON object.
 """
 
-async def parse_report_with_vision(image_bytes_list: list[bytes], medications: List[Dict[str, Any]] = None, diagnosis: Optional[str] = None, model: str = "google/gemini-2.5-pro") -> ReportParsed:
+async def parse_report_with_vision(
+    image_bytes_list: list[bytes],
+    medications: List[Dict[str, Any]] = None,
+    diagnosis: Optional[str] = None,
+    model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0",
+) -> ReportParsed:
     try:
-        logger.info(f"Initializing vision model for parsing {len(image_bytes_list)} report images")
-        
-        # Get API key from environment
-        api_key = os.getenv("OPEN_ROUTER_API_KEY")
-        if not api_key:
-            load_dotenv(override=True)
-            api_key = os.getenv("OPEN_ROUTER_API_KEY")
-        
-        if not api_key:
-            logger.error("OPEN_ROUTER_API_KEY environment variable is not set")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="OPEN_ROUTER_API_KEY environment variable is not set. Please check your .env file."
-            )
-        
-        # Strip whitespace from API key
-        api_key = api_key.strip()
-        
-        # Prepare medications list (handle None case)
+        logger.info(f"Initializing Bedrock vision model for parsing {len(image_bytes_list)} report images")
         meds_list = medications if medications else []
-        
-        # Prepare message content with images
         prompt = get_report_parsing_prompt(medications=meds_list, diagnosis=diagnosis)
-        content = [
-            {
-                "type": "text",
-                "text": prompt + "\n\nAnalyze the following medical report images:"
-            }
-        ]
-        
-        # Add all images as base64 encoded data URLs
-        for img_bytes in image_bytes_list:
-            base64_image = base64.b64encode(img_bytes).decode('utf-8')
-            data_url = f"data:image/png;base64,{base64_image}"
-            content.append({
-                "type": "image_url",
-                "image_url": {"url": data_url}
-            })
-        
-        # Prepare request payload
-        payload = {
-            "model": model,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": "You are a medical report parser."
-                },
-                {
-                    "role": "user",
-                    "content": content
-                }
-            ]
-        }
-        
-        # Prepare headers
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "HTTP-Referer": os.getenv("SITE_URL", "https://medicare-app.com"),
-            "X-Title": os.getenv("SITE_NAME", "MediCare Report Parser"),
-            "Content-Type": "application/json"
-        }
-        
-        logger.info(f"Using OpenRouter API with model: {model}")
-        logger.info("Sending report images to vision model for parsing")
-        
-        # Make async HTTP request to OpenRouter
-        try:
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                response = await client.post(
-                    url="https://openrouter.ai/api/v1/chat/completions",
-                    headers=headers,
-                    json=payload
-                )
-                response.raise_for_status()
-                response_data = response.json()
-        except httpx.HTTPStatusError as e:
-            error_detail = "Unknown error"
-            try:
-                error_data = e.response.json()
-                error_detail = error_data.get("error", {}).get("message", str(e))
-            except:
-                error_detail = str(e)
-            logger.error(f"OpenRouter API HTTP error: {error_detail}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"OpenRouter API error: {error_detail}"
-            )
-        except httpx.HTTPError as e:
-            logger.error(f"OpenRouter API HTTP error: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to connect to OpenRouter API: {str(e)}"
-            )
-        
-        # Extract response text
-        try:
-            response_text = response_data["choices"][0]["message"]["content"].strip()
-        except (KeyError, IndexError) as e:
-            logger.error(f"Invalid response format from OpenRouter: {response_data}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Invalid response format from OpenRouter API"
-            )
+        user_text = prompt + "\n\nAnalyze the following medical report images:"
+        response_text = await bedrock_vision_completion(
+            system_prompt="You are a medical report parser.",
+            user_text=user_text,
+            image_bytes_list=image_bytes_list,
+            model_id=model,
+        )
         
         logger.info(f"Vision model response received: {len(response_text)} characters")
         logger.debug(f"Response preview: {response_text[:200]}...")
