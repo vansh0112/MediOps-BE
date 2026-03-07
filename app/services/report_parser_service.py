@@ -69,7 +69,6 @@ async def parse_report_with_vision(
     image_bytes_list: list[bytes],
     medications: List[Dict[str, Any]] = None,
     diagnosis: Optional[str] = None,
-    model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0",
 ) -> ReportParsed:
     try:
         logger.info(f"Initializing Bedrock vision model for parsing {len(image_bytes_list)} report images")
@@ -80,7 +79,6 @@ async def parse_report_with_vision(
             system_prompt="You are a medical report parser.",
             user_text=user_text,
             image_bytes_list=image_bytes_list,
-            model_id=model,
         )
         
         logger.info(f"Vision model response received: {len(response_text)} characters")

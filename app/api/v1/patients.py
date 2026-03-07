@@ -62,7 +62,7 @@ async def create_patient_endpoint(
     admission_date: date = Form(...),
     discharge_date: Optional[date] = Form(None),
     medical_condition: str = Form(..., min_length=1, max_length=500),
-    assigned_doctor: str = Form(..., min_length=1, max_length=200),
+    assigned_doctor: Optional[str] = Form(""),
     age: int = Form(..., ge=0, le=130),
     gender: str = Form(..., min_length=1, max_length=50),
     bill_details: Optional[List[UploadFile]] = File(None),
@@ -82,6 +82,8 @@ async def create_patient_endpoint(
     medication_details and doctor_notes should be JSON strings (optional if discharge_summary_pdf is provided).
     """
     try:
+        if not (assigned_doctor and assigned_doctor.strip()):
+            assigned_doctor = "Not assigned"
         logger.info(f"Creating patient: {patient_name}")
         logger.debug(f"Patient details - email: {patient_email}, contact: {patient_contact}, age: {age}, gender: {gender}")
         

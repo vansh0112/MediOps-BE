@@ -14,51 +14,42 @@ def get_bill_parsing_prompt() -> str:
     """Generate the parsing prompt for bill extraction."""
     
     return """
-You are a medical bill parser specialized in extracting structured information from medical bills and invoices.
+        You are a medical bill parser specialized in extracting structured information from medical bills and invoices.
 
-Your task is to parse the provided medical bill and extract:
-1. **Bill name**: The type of bill (e.g., "Hospital Bill", "Pharmacy Bill", "Lab Charges Bill", "Consultation Bill", "Surgery Bill")
-2. **Details**: All bill items/services with their costs. For each item extract:
-   - **name**: Item/service name (e.g., "Room Charges", "Medication - Aspirin", "Blood Test", "Doctor Consultation")
-   - **cost**: Cost of the item (preserve the format from the bill, e.g., "5000", "1500.50", "₹2000", "$100")
-3. **Total**: The total bill amount (preserve the format from the bill, e.g., "25000", "₹50000", "$1500.75")
+        Your task is to parse the provided medical bill and extract:
+        1. **Bill name**: The type of bill (e.g., "Hospital Bill", "Pharmacy Bill", "Lab Charges Bill", "Consultation Bill", "Surgery Bill")
+        2. **Details**: All bill items/services with their costs. For each item extract:
+        - **name**: Item/service name (e.g., "Room Charges", "Medication - Aspirin", "Blood Test", "Doctor Consultation")
+        - **cost**: Cost of the item (preserve the format from the bill, e.g., "5000", "1500.50", "₹2000", "$100")
+        3. **Total**: The total bill amount (preserve the format from the bill, e.g., "25000", "₹50000", "$1500.75")
 
-IMPORTANT RULES:
-- Extract ALL bill items from the document, not just major ones
-- For each item, capture the exact name as shown in the bill
-- Preserve the cost format exactly as shown (including currency symbols, decimals, etc.)
-- The total should match the final total shown on the bill
-- If the bill has subtotals or tax breakdowns, include them as separate items if they are listed
-- Group related items if they are listed together (e.g., "Medication - Aspirin 500mg" not just "Aspirin")
+        IMPORTANT RULES:
+        - Extract ALL bill items from the document, not just major ones
+        - For each item, capture the exact name as shown in the bill
+        - Preserve the cost format exactly as shown (including currency symbols, decimals, etc.)
+        - The total should match the final total shown on the bill
+        - If the bill has subtotals or tax breakdowns, include them as separate items if they are listed
+        - Group related items if they are listed together (e.g., "Medication - Aspirin 500mg" not just "Aspirin")
 
-IMPORTANT: Return ONLY a valid JSON object with this exact structure:
-{{
-    "name": "string (bill name/type)",
-    "details": [
+        IMPORTANT: Return ONLY a valid JSON object with this exact structure:
         {{
-            "name": "string (item/service name)",
-            "cost": "string (cost amount)"
+            "name": "string (bill name/type)",
+            "details": [
+                {{
+                    "name": "string (item/service name)",
+                    "cost": "string (cost amount)"
+                }}
+            ],
+            "total": "string (total bill amount)"
         }}
-    ],
-    "total": "string (total bill amount)"
-}}
 
 Do not include any explanations, markdown formatting, or additional text. Return ONLY the JSON object.
 """
 
-async def parse_bill_with_vision(
-    image_bytes_list: list[bytes],
-    model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0",
-) -> BillParsed:
+async def parse_bill_with_vision(image_bytes_list: list[bytes]) -> BillParsed:
     """
     Parse medical bill using AWS Bedrock vision model (image-based parsing).
-    
-    Args:
-        image_bytes_list: List of image bytes from PDF pages
-        model: Bedrock model ID for parsing
-    
-    Returns:
-        BillParsed object with extracted bill information
+    Model is set via BEDROCK_MODEL_ID in .env (see app.utils.bedrock_client).
     """
     try:
         logger.info(f"Initializing Bedrock vision model for parsing {len(image_bytes_list)} bill images")
@@ -68,7 +59,6 @@ async def parse_bill_with_vision(
             system_prompt="You are a medical bill parser.",
             user_text=user_text,
             image_bytes_list=image_bytes_list,
-            model_id=model,
         )
         
         logger.info(f"Vision model response received: {len(response_text)} characters")

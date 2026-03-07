@@ -210,25 +210,10 @@ async def generate_insurer_justification_document(
     bill_details: List[Dict[str, Any]],
     reports: List[Dict[str, Any]],
     doctor_notes: str,
-    model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0",
 ) -> Optional[str]:
     """
     Generate an insurer justification document using AWS Bedrock.
-    
-    Args:
-        patient_name: Patient's name
-        medical_condition: Patient's medical condition
-        admission_date: Admission date (string format)
-        discharge_date: Discharge date (string format or None)
-        age: Patient age
-        gender: Patient gender
-        assigned_doctor: Assigned doctor name
-        medication_details: Medication details dictionary
-        bill_details: List of bill details
-        reports: List of report details
-        doctor_notes: Doctor's notes
-        model: Bedrock model ID (default: Claude 3.5 Sonnet)
-    
+    Model is set via BEDROCK_MODEL_ID in .env (see app.utils.bedrock_client).
     Returns:
         str: Cloudinary URL of the generated PDF, or None if generation fails
     """
@@ -255,7 +240,6 @@ async def generate_insurer_justification_document(
         response_text = await bedrock_text_completion(
             system_prompt=system_prompt,
             user_content=prompt,
-            model_id=model,
             temperature=0.3,
         )
         

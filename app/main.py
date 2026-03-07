@@ -1,13 +1,9 @@
 import logging
-from typing import (
-    Any,
-    Dict,
-)
-from fastapi import (
-    FastAPI,
-    Request,
-)
+from typing import Any, Dict
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 import app.config.cloudinary
 from app.api.v1.auth import router as auth_router
@@ -38,6 +34,19 @@ app.add_middleware(
 # Include API routers
 app.include_router(auth_router, prefix="/api/v1/auth")
 app.include_router(patients_router, prefix="/api/v1/patients")
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(_request: Request, exc: RequestValidationError):
+    """Log 422 validation errors so you can see the reason in the terminal."""
+    errors = exc.errors()
+    log = logging.getLogger("app.main")
+    log.warning("422 Validation error: %s", errors)
+    return JSONResponse(
+        status_code=422,
+        content={"detail": errors, "message": "Validation failed. Send multipart/form-data with required fields."},
+    )
+
 
 @app.get("/")
 async def root(request: Request):

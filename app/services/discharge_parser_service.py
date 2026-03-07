@@ -445,7 +445,6 @@ def robust_json_parse(text: str) -> dict:
 
 async def parse_discharge_summary_with_vision(
     image_bytes_list: list[bytes],
-    model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0",
 ) -> DischargeSummaryParsed:
     """
     Parse discharge summary using AWS Bedrock vision model (image-based parsing).
@@ -458,7 +457,6 @@ async def parse_discharge_summary_with_vision(
             system_prompt="You are a medical document parser.",
             user_text=user_text,
             image_bytes_list=image_bytes_list,
-            model_id=model,
         )
         
         logger.info(f"Vision model response received: {len(response_text)} characters")
