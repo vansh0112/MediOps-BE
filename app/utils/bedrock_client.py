@@ -12,11 +12,11 @@ from fastapi import HTTPException, status
 logger = logging.getLogger(__name__)
 
 # Inference profile ID (required for on-demand; raw model ID not supported).
-# Set BEDROCK_MODEL_ID in .env to override. For non-US: apac.* or eu.*
-_DEFAULT_BEDROCK_MODEL = "anthropic.claude-haiku-4-5-20251001-v1:0"
-DEFAULT_MODEL = os.getenv("BEDROCK_MODEL_ID", _DEFAULT_BEDROCK_MODEL)
-
+# BEDROCK_MODEL=us.anthropic.claude-haiku-4-5-20251001-v1:0
+_DEFAULT_BEDROCK_MODEL = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+DEFAULT_MODEL = os.getenv("BEDROCK_MODEL", _DEFAULT_BEDROCK_MODEL)
 print(DEFAULT_MODEL)
+
 def _check_aws_credentials() -> None:
     """Ensure AWS credentials are configured."""
     if not os.getenv("AWS_ACCESS_KEY_ID") or not os.getenv("AWS_SECRET_ACCESS_KEY"):

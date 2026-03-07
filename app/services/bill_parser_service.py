@@ -49,7 +49,7 @@ Do not include any explanations, markdown formatting, or additional text. Return
 async def parse_bill_with_vision(image_bytes_list: list[bytes]) -> BillParsed:
     """
     Parse medical bill using AWS Bedrock vision model (image-based parsing).
-    Model is set via BEDROCK_MODEL_ID in .env (see app.utils.bedrock_client).
+    Model is set via BEDROCK_MODEL in .env (see app.utils.bedrock_client).
     """
     try:
         logger.info(f"Initializing Bedrock vision model for parsing {len(image_bytes_list)} bill images")

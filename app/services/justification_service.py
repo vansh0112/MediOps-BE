@@ -213,7 +213,7 @@ async def generate_insurer_justification_document(
 ) -> Optional[str]:
     """
     Generate an insurer justification document using AWS Bedrock.
-    Model is set via BEDROCK_MODEL_ID in .env (see app.utils.bedrock_client).
+    Model is set via BEDROCK_MODEL in .env (see app.utils.bedrock_client).
     Returns:
         str: Cloudinary URL of the generated PDF, or None if generation fails
     """
