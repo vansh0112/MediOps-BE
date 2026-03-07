@@ -10,6 +10,7 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import app.config.cloudinary
+from app.api.v1.auth import router as auth_router
 from app.api.v1.patients import router as patients_router
 
 # Load environment variables
@@ -35,6 +36,7 @@ app.add_middleware(
 )
 
 # Include API routers
+app.include_router(auth_router, prefix="/api/v1/auth")
 app.include_router(patients_router, prefix="/api/v1/patients")
 
 @app.get("/")
