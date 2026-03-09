@@ -78,6 +78,11 @@ async def create_patient(patient: PatientCreate) -> PatientResponse:
         
         # Map 'id' to '_id' for PatientResponse compatibility
         created_patient["_id"] = created_patient.get("id")
+        # Normalize phone numbers (Supabase may return them as int)
+        if "patient_contact" in created_patient and created_patient["patient_contact"] is not None:
+            created_patient["patient_contact"] = str(created_patient["patient_contact"])
+        if "emergency_contact" in created_patient and created_patient["emergency_contact"] is not None:
+            created_patient["emergency_contact"] = str(created_patient["emergency_contact"])
         
         logger.info("Creating PatientResponse object")
         response = PatientResponse(**created_patient)
@@ -114,6 +119,11 @@ async def get_all_patients() -> list[PatientResponse]:
         for patient_data in result.data:
             # Map 'id' to '_id' for PatientResponse compatibility
             patient_data["_id"] = patient_data.get("id")
+            # Normalize phone numbers (Supabase may return them as int)
+            if "patient_contact" in patient_data and patient_data["patient_contact"] is not None:
+                patient_data["patient_contact"] = str(patient_data["patient_contact"])
+            if "emergency_contact" in patient_data and patient_data["emergency_contact"] is not None:
+                patient_data["emergency_contact"] = str(patient_data["emergency_contact"])
             try:
                 patient = PatientResponse(**patient_data)
                 patients.append(patient)
