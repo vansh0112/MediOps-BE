@@ -4,7 +4,7 @@ import logging
 import json
 from typing import Optional, List, Dict, Any
 from fastapi import HTTPException, status
-from app.utils.bedrock_client import bedrock_vision_completion
+from app.utils.openai_client import openai_vision_completion
 from app.schemas.reports import ReportParsed, Biomarker
 
 logger = logging.getLogger(__name__)
@@ -75,7 +75,7 @@ async def parse_report_with_vision(
         meds_list = medications if medications else []
         prompt = get_report_parsing_prompt(medications=meds_list, diagnosis=diagnosis)
         user_text = prompt + "\n\nAnalyze the following medical report images:"
-        response_text = await bedrock_vision_completion(
+        response_text = await openai_vision_completion(
             system_prompt="You are a medical report parser.",
             user_text=user_text,
             image_bytes_list=image_bytes_list,

@@ -5,7 +5,7 @@ import json
 import re
 from typing import Optional, Dict, Any, List
 from fastapi import HTTPException, status
-from app.utils.bedrock_client import bedrock_text_completion
+from app.utils.openai_client import openai_text_completion
 from app.utils.pdf_service import convert_markdown_to_pdf
 
 logger = logging.getLogger(__name__)
@@ -212,8 +212,8 @@ async def generate_insurer_justification_document(
     doctor_notes: str,
 ) -> Optional[str]:
     """
-    Generate an insurer justification document using AWS Bedrock.
-    Model is set via BEDROCK_MODEL in .env (see app.utils.bedrock_client).
+    Generate an insurer justification document using OpenAI.
+    Model is set via OPENAI_MODEL in .env (see app.utils.openai_client).
     Returns:
         str: Cloudinary URL of the generated PDF, or None if generation fails
     """
@@ -237,7 +237,7 @@ async def generate_insurer_justification_document(
             "justification documents for insurance claims. Your documents help reduce claim "
             "denials by providing detailed medical necessity explanations."
         )
-        response_text = await bedrock_text_completion(
+        response_text = await openai_text_completion(
             system_prompt=system_prompt,
             user_content=prompt,
             temperature=0.3,

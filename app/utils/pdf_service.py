@@ -12,6 +12,22 @@ from dotenv import load_dotenv
 load_dotenv()
 logger = logging.getLogger(__name__)
 
+def _sanitize_pdf_text(text: str) -> str:
+    """
+    fpdf2 core fonts are latin-1 only. Replace common unicode punctuation that breaks PDF generation.
+    """
+    return (
+        text.replace("\u2013", "-")  # en dash
+        .replace("\u2014", "-")      # em dash
+        .replace("\u2212", "-")      # minus
+        .replace("\u2018", "'")
+        .replace("\u2019", "'")
+        .replace("\u201c", "\"")
+        .replace("\u201d", "\"")
+        .replace("\u2026", "...")
+        .replace("\u00a0", " ")      # nbsp
+    )
+
 async def convert_pdf_bytes_to_images(pdf_bytes: bytes) -> List[bytes]:
     """
     Convert PDF bytes to a list of images (one per page) using PyMuPDF.
@@ -308,8 +324,9 @@ async def convert_markdown_to_pdf(markdown_content: str, patient_name: str, fold
 
         # Step 1: Convert markdown to HTML
         logger.info(f"Step 1: Converting markdown to HTML for {folder_suffix}...")
+        safe_markdown = _sanitize_pdf_text(markdown_content)
         html_content = markdown.markdown(
-            markdown_content,
+            safe_markdown,
             extensions=['extra', 'nl2br', 'sane_lists']
         )
 
