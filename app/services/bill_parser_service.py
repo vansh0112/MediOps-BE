@@ -4,7 +4,7 @@ import logging
 import json
 from typing import List
 from fastapi import HTTPException, status
-from app.utils.bedrock_client import bedrock_vision_completion
+from app.utils.openai_client import openai_vision_completion
 from app.schemas.bills import BillParsed, BillDetail
 
 logger = logging.getLogger(__name__)
@@ -48,14 +48,14 @@ Do not include any explanations, markdown formatting, or additional text. Return
 
 async def parse_bill_with_vision(image_bytes_list: list[bytes]) -> BillParsed:
     """
-    Parse medical bill using AWS Bedrock vision model (image-based parsing).
-    Model is set via BEDROCK_MODEL in .env (see app.utils.bedrock_client).
+    Parse medical bill using OpenAI vision model (image-based parsing).
+    Model is set via OPENAI_MODEL in .env (see app.utils.openai_client).
     """
     try:
-        logger.info(f"Initializing Bedrock vision model for parsing {len(image_bytes_list)} bill images")
+        logger.info(f"Initializing OpenAI vision model for parsing {len(image_bytes_list)} bill images")
         prompt = get_bill_parsing_prompt()
         user_text = prompt + "\n\nAnalyze the following medical bill images:"
-        response_text = await bedrock_vision_completion(
+        response_text = await openai_vision_completion(
             system_prompt="You are a medical bill parser.",
             user_text=user_text,
             image_bytes_list=image_bytes_list,

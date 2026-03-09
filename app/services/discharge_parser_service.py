@@ -6,7 +6,7 @@ import re
 from typing import Optional
 from datetime import datetime, date, timedelta
 from fastapi import HTTPException, status
-from app.utils.bedrock_client import bedrock_vision_completion
+from app.utils.openai_client import openai_vision_completion
 from app.schemas.medications import (
     DischargeSummaryParsed,
     MedicationDetail,
@@ -447,13 +447,13 @@ async def parse_discharge_summary_with_vision(
     image_bytes_list: list[bytes],
 ) -> DischargeSummaryParsed:
     """
-    Parse discharge summary using AWS Bedrock vision model (image-based parsing).
+    Parse discharge summary using OpenAI vision model (image-based parsing).
     """
     try:
-        logger.info(f"Initializing Bedrock vision model for parsing {len(image_bytes_list)} images")
+        logger.info(f"Initializing OpenAI vision model for parsing {len(image_bytes_list)} images")
         prompt = get_discharge_summary_parsing_prompt()
         user_text = prompt + "\n\nAnalyze the following discharge summary images:"
-        response_text = await bedrock_vision_completion(
+        response_text = await openai_vision_completion(
             system_prompt="You are a medical document parser.",
             user_text=user_text,
             image_bytes_list=image_bytes_list,

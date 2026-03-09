@@ -101,6 +101,14 @@ class PatientResponse(PatientBase):
     created_at: Optional[datetime] = Field(None, description="Timestamp when patient was created")
     updated_at: Optional[datetime] = Field(None, description="Timestamp when patient was last updated")
 
+    @field_validator("patient_contact", "emergency_contact", mode="before")
+    @classmethod
+    def coerce_contact_to_str(cls, v) -> str:
+        """Coerce integer contact fields from DB to string before validation."""
+        if isinstance(v, int):
+            return str(v)
+        return v
+
     class Config:
         """Pydantic config."""
         populate_by_name = True
